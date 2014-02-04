@@ -27,7 +27,7 @@ jobQueue.registerTask("./foo_node_module");
 
 jobQueue.start();
 
-jobQueue.submitJob('thisIsMyJobTypeId', 'resource_id', {theString: "derp"}, function(err) {
+jobQueue.submitJob('thisIsMyTaskId', 'resource_id', {theString: "derp"}, function(err) {
   if (err) throw err;
   console.info("job submitted");
 });
@@ -41,7 +41,7 @@ jobQueue.on('error', function(err) {
 
 ```js
 module.exports = {
-  id: 'thisIsMyJobTypeId',
+  id: 'thisIsMyTaskId',
   perform: function(params, callback) {
     console.info(params.theString.toUpperCase());
     callback();
@@ -116,3 +116,11 @@ Adds a job to the queue to be processed by the next available worker.
 
 Gracefully begins the shutdown process allowing any ongoing tasks to finish.
 `callback` is called once everything is completly shut down.
+
+### jobQueue.retryFailedJobs(callback)
+
+Moves all jobs from the failed queue to the pending queue.
+
+### jobQueue.deleteFailedJobs(callback)
+
+Deletes all jobs from the failed queue.
