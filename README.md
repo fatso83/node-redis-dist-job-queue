@@ -16,6 +16,8 @@
    or can run in the same memory context as your main process, for extra
    simplicity and convenience.
  * This module is only made to work with the Redis single instance configuration.
+ * When a job fails or the process dies while a job is executing, the job is
+   moved to a failed jobs queue. You can then retry failed jobs or delete them.
 
 ## Synopsis
 
@@ -62,7 +64,7 @@ module.exports = {
  * `redisConfig` - defaults to an object with properties:
    * `host` - 127.0.0.1
    * `port` - 6379
-   * `db` - 1
+   * `db` - 0
  * `childProcessCount` - If set to 0 (the default), no child processes are
    created. Instead all jobs are performed in the current process. If set to
    a positive number, that many worker child processes are created.
@@ -72,8 +74,8 @@ module.exports = {
    total concurrency for this server is `workerCount`. Defaults to the number
    of CPU cores on the computer.
  * `flushStaleTimeout` - every this many milliseconds, scan for jobs that
-   crashed while executing and moves them back into the queue.
-   Defaults to 30000.
+   crashed while executing and moves them from the processing queue to the
+   failed job queue. Defaults to 30000.
 
 ### jobQueue.start()
 
@@ -124,3 +126,10 @@ Moves all jobs from the failed queue to the pending queue.
 ### jobQueue.deleteFailedJobs(callback)
 
 Deletes all jobs from the failed queue.
+
+### jobQueue.forceFlushStaleJobs(callback)
+
+Forces an immediate flushing of jobs that crashed while executing. Jobs of this
+sort are put into the failed queue, and you can then retry or delete them.
+You probably don't want to call `forceFlushStaleJobs` manually. It's mostly for
+testing purposes.

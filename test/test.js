@@ -3,14 +3,21 @@ var assert = require('assert');
 var path = require('path');
 var shared = require('./shared');
 var fs = require('fs');
+var redis = require('redis');
 
 var describe = global.describe;
 var it = global.it;
 var after = global.after;
+var beforeEach = global.beforeEach;
 
 var hitCountFile = path.resolve(__dirname, "hitCount.txt");
 
 describe("JobQueue", function() {
+  beforeEach(function(done) {
+    var redisClient = redis.createClient();
+    redisClient.send_command('flushdb', [], done);
+  });
+
   after(function(done) {
     fs.unlink(hitCountFile, function(err) {
       done();
@@ -112,5 +119,27 @@ describe("JobQueue", function() {
     jobQueue.start();
 
     jobQueue.submitJob('failFirst', 'foo', null, assert.ifError);
+  });
+
+  it("handles jobs that crash while processing", function(done) {
+    var jobQueue = new JobQueue({ childProcessCount: 3, workerCount: 1});
+
+    jobQueue.once('childRestart', function() {
+      jobQueue.once('jobFail', function(job) {
+        assert.strictEqual(job.type, 'crashTask');
+        jobQueue.shutdown(done);
+      });
+
+      setTimeout(function() {
+        jobQueue.forceFlushStaleJobs(assert.ifError);
+      }, 200);
+    });
+
+
+    jobQueue.registerTask('./task_crash');
+
+    jobQueue.start();
+
+    jobQueue.submitJob('crashTask', 'derpy', null, assert.ifError);
   });
 });
