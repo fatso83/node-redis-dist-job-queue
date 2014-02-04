@@ -69,16 +69,45 @@ describe("JobQueue", function() {
 
     var jobQueue = new JobQueue({ workerCount: 4 });
 
-    jobQueue.on('jobFail', function() {
-      jobQueue.retryFailedJobs();
+    jobQueue.once('jobFail', function() {
+      jobQueue.retryFailedJobs(function(err) {
+        if (err) return done(err);
+      });
     });
 
-    jobQueue.on('jobSuccess', function() {
+    jobQueue.once('jobSuccess', function() {
       assert.strictEqual(shared.count, 2);
       jobQueue.shutdown(done);
     });
 
     jobQueue.registerTask('./task_fail');
+
+    jobQueue.start();
+
+    jobQueue.submitJob('failFirst', 'foo', null, assert.ifError);
+  });
+
+  it("ability to delete failed jobs", function(done) {
+    shared.count = 0;
+
+    var jobQueue = new JobQueue({ workerCount: 1 });
+
+    jobQueue.on('jobFail', function() {
+      jobQueue.deleteFailedJobs(function(err) {
+        if (err) return done(err);
+        jobQueue.retryFailedJobs(function(err) {
+          if (err) return done(err);
+          shared.callback = function() {
+            assert.strictEqual(shared.count, 1);
+            jobQueue.shutdown(done);
+          };
+          jobQueue.submitJob('callback', 'foo2', null, assert.ifError);
+        });
+      });
+    });
+
+    jobQueue.registerTask('./task_fail');
+    jobQueue.registerTask('./task_cb');
 
     jobQueue.start();
 
