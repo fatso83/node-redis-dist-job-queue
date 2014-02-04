@@ -32,28 +32,40 @@ shavaluator.add('moveAll',
     'end\n' +
     'return nil\n');
 
+var queueDefaults = {
+  namespace: "redis-dist-job-queue.",
+  queueId: "default",
+  workerCount: cpuCount,
+  redisConfig: {},
+  flushStaleTimeout: 60000,
+};
+
 util.inherits(Queue, EventEmitter);
 function Queue(options) {
   EventEmitter.call(this);
 
-  options = options || {};
-  this.namespace = options.namespace || "redis-dist-job-queue.";
-  this.queueId = options.queueId || "default";
+  options = extend(extend({}, queueDefaults), options || {});
+  this.namespace = options.namespace;
+  this.queueId = options.queueId;
+
   this.queueKey = this.namespace + "queue." + this.queueId;
   this.processingQueueKey = this.namespace + "queue_processing." + this.queueId;
-  this.workerCount = options.workerCount || cpuCount;
-  this.redisConfig = options.redisConfig || {};
+  this.workerCount = options.workerCount;
+  this.redisConfig = options.redisConfig;
   this.registeredJobs = {};
-  this.flushStaleTimeout = options.flushStaleTimeout || 60000;
-  this.redisClient = redis.createClient(this.redisConfig);
-  this.shuttingDown = false;
+  this.flushStaleTimeout = options.flushStaleTimeout;
+  this.redisClient = redis.createClient(this.redisConfig.port, this.redisConfig.host, this.redisConfig);
+}
 
+Queue.prototype.start = function() {
+  this.shuttingDown = false;
   this.pend = new Pend();
   this.blockingRedisClients = [];
   this.flushStaleInterval = setInterval(this.flushStaleJobs.bind(this), this.flushStaleTimeout);
   for (var i = 0; i < this.workerCount; i += 1) {
     this.spawnWorker();
   }
+  this.flushStaleJobs();
 }
 
 var jobDefaults = {
@@ -118,7 +130,7 @@ Queue.prototype.spawnWorker = function() {
   var self = this;
 
   // create new client because blpop blocks the connection
-  var redisClient = redis.createClient(self.redisConfig);
+  var redisClient = redis.createClient(self.redisConfig.port, self.redisConfig.host, self.redisConfig);
   self.blockingRedisClients.push(redisClient);
 
   handleOne();
@@ -159,9 +171,9 @@ Queue.prototype.processOneItem = function(redisClient, cb) {
       return cb();
     }
 
-    var job = self.registeredJobs[obj.jobTypeId];
+    var job = self.registeredJobs[obj.type];
     if (!job) {
-      self.emit('error', new Error("unregistered job: " + obj.jobtypeId));
+      self.emit('error', new Error("unregistered job: " + obj.type));
       return cb();
     }
 
@@ -222,9 +234,6 @@ Queue.prototype.processOneItem = function(redisClient, cb) {
           if (err) {
             self.emit('error', err);
           }
-          if (!result) {
-            self.emit('error', new Error("unable to unlock resource"));
-          }
           cb();
         });
       }
@@ -239,4 +248,5 @@ function extend(target, source) {
       target[propName] = source[propName];
     }
   }
+  return target;
 }

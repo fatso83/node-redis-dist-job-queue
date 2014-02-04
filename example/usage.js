@@ -1,9 +1,5 @@
-# Distributed Job Queue for Node.js backed by Redis
+var JobQueue = require('..');
 
-## Usage
-
-```js
-var JobQueue = require('redis-dist-job-queue');
 var jobQueue = new JobQueue();
 
 jobQueue.registerJob('thisIsMyJobTypeId', {
@@ -37,4 +33,3 @@ jobQueue.submitJob('pleaseShutDownNow', 'resource_id_2', null, function(err) {
   console.info("cleanup job submitted");
 });
 
-```
