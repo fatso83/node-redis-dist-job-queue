@@ -111,3 +111,8 @@ Adds a job to the queue to be processed by the next available worker.
  * `params` - an object which will get serialized to and from JSON and then
    passed to the `perform` function of a task.
  * `callback(err)` - lets you know when the job made it onto the queue
+
+### jobQueue.shutdown(callback)
+
+Gracefully begins the shutdown process allowing any ongoing tasks to finish.
+`callback` is called once everything is completly shut down.
