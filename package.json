@@ -1,0 +1,14 @@
+{
+  "name": "redis-dist-job-queue",
+  "version": "0.0.0",
+  "description": "distributed job queue using redis",
+  "main": "index.js",
+  "author": "Andrew Kelley <superjoe30@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "redis": "~0.10.0",
+    "hiredis": "~0.1.16",
+    "redis-evalsha": "~1.1.0",
+    "pend": "~1.1.1"
+  }
+}
