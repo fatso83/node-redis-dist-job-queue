@@ -40,6 +40,12 @@ var queueDefaults = {
   flushStaleTimeout: 60000,
 };
 
+var redisConfigDefaults = {
+  port: 6379,
+  host: "127.0.0.1",
+  db: 1,
+};
+
 util.inherits(Queue, EventEmitter);
 function Queue(options) {
   EventEmitter.call(this);
@@ -51,10 +57,10 @@ function Queue(options) {
   this.queueKey = this.namespace + "queue." + this.queueId;
   this.processingQueueKey = this.namespace + "queue_processing." + this.queueId;
   this.workerCount = options.workerCount;
-  this.redisConfig = options.redisConfig;
+  this.redisConfig = extend(extend({}, redisConfigDefaults), options.redisConfig);
   this.registeredJobs = {};
   this.flushStaleTimeout = options.flushStaleTimeout;
-  this.redisClient = redis.createClient(this.redisConfig.port, this.redisConfig.host, this.redisConfig);
+  this.redisClient = createRedisClient(this.redisConfig);
 }
 
 Queue.prototype.start = function() {
@@ -130,7 +136,7 @@ Queue.prototype.spawnWorker = function() {
   var self = this;
 
   // create new client because blpop blocks the connection
-  var redisClient = redis.createClient(self.redisConfig.port, self.redisConfig.host, self.redisConfig);
+  var redisClient = createRedisClient(self.redisConfig);
   self.blockingRedisClients.push(redisClient);
 
   handleOne();
@@ -249,4 +255,10 @@ function extend(target, source) {
     }
   }
   return target;
+}
+
+function createRedisClient(config) {
+  var client = redis.createClient(config.port, config.host, config);
+  client.select(config.db);
+  return client;
 }
