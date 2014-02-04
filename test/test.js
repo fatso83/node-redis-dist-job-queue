@@ -63,4 +63,25 @@ describe("JobQueue", function() {
       });
     }
   });
+
+  it("moves jobs to failed queue and back", function(done) {
+    shared.count = 0;
+
+    var jobQueue = new JobQueue({ workerCount: 4 });
+
+    jobQueue.on('jobFail', function() {
+      jobQueue.retryFailedJobs();
+    });
+
+    jobQueue.on('jobSuccess', function() {
+      assert.strictEqual(shared.count, 2);
+      jobQueue.shutdown(done);
+    });
+
+    jobQueue.registerTask('./task_fail');
+
+    jobQueue.start();
+
+    jobQueue.submitJob('failFirst', 'foo', null, assert.ifError);
+  });
 });
