@@ -5,8 +5,8 @@
  * Register tasks that can be performed. Each task definition lives in its
    own node module.
  * When you submit a processing job, you choose which task to run and
-   supply a resource ID. If that resource ID is already being processed,
-   the job will not run.
+   supply a resource ID. If multiple processing jobs are submitted for the
+   same resource ID, only one of them will run.
  * Jobs are taken from a redis queue; so the task could be performed on any
    computer with access to the resource.
  * When you want to shutdown, call `shutdown` and wait for the callback. This
@@ -91,10 +91,23 @@ The node module at `modulePath` must export these options:
  * `perform(params, callback)` - function which actually does the task.
    * `params` - the same params you gave to `submitJob`, JSON encoded
       and then decoded.
-   * `callback(err)` - call it when you're done processing
+   * `callback(err)` - call it when you're done processing. Until you call
+     this callback, the resource is locked and no other processing job will
+     touch it.
 
 And it may export these optional options:
 
  * `timeout` - milliseconds since last heartbeat to wait before considering
    a job failed. defaults to `10000`.
 
+### jobQueue.submitJob(taskId, resourceId, params, callback)
+
+Adds a job to the queue to be processed by the next available worker.
+
+ * `taskId` - the `id` field of a task you registered with `registerTask`
+   earlier.
+ * `resourceId` - a unique identifier for the resource you are about to
+   process. Only one job will run at a time per resource.
+ * `params` - an object which will get serialized to and from JSON and then
+   passed to the `perform` function of a task.
+ * `callback(err)` - lets you know when the job made it onto the queue
