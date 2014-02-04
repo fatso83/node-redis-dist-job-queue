@@ -15,6 +15,7 @@
  * Workers can either run as child processes for extra concurrency and safety,
    or can run in the same memory context as your main process, for extra
    simplicity and convenience.
+ * This module is only made to work with the Redis single instance configuration.
 
 ## Synopsis
 
@@ -62,9 +63,6 @@ module.exports = {
    * `host` - 127.0.0.1
    * `port` - 6379
    * `db` - 1
- * `flushStaleTimeout` - every this many milliseconds, scan for jobs that
-   crashed while executing and moves them back into the queue.
-   Defaults to 60000.
  * `childProcessCount` - If set to 0 (the default), no child processes are
    created. Instead all jobs are performed in the current process. If set to
    a positive number, that many worker child processes are created.
@@ -73,6 +71,9 @@ module.exports = {
    server is `childProcessCount * workerCount`. If `childProcessCount` is `0`,
    total concurrency for this server is `workerCount`. Defaults to the number
    of CPU cores on the computer.
+ * `flushStaleTimeout` - every this many milliseconds, scan for jobs that
+   crashed while executing and moves them back into the queue.
+   Defaults to 30000.
 
 ### jobQueue.start()
 
