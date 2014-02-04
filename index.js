@@ -6,7 +6,7 @@ var makeUuid = require('uuid').v4;
 var cpuCount = require('os').cpus().length;
 var Pend = require('pend');
 
-module.exports = Queue;
+module.exports = JobQueue;
 
 var shavaluator = new Shavaluator();
 
@@ -46,8 +46,8 @@ var redisConfigDefaults = {
   db: 1,
 };
 
-util.inherits(Queue, EventEmitter);
-function Queue(options) {
+util.inherits(JobQueue, EventEmitter);
+function JobQueue(options) {
   EventEmitter.call(this);
 
   options = extend(extend({}, queueDefaults), options || {});
@@ -58,12 +58,12 @@ function Queue(options) {
   this.processingQueueKey = this.namespace + "queue_processing." + this.queueId;
   this.workerCount = options.workerCount;
   this.redisConfig = extend(extend({}, redisConfigDefaults), options.redisConfig);
-  this.registeredJobs = {};
+  this.tasks = {};
   this.flushStaleTimeout = options.flushStaleTimeout;
   this.redisClient = createRedisClient(this.redisConfig);
 }
 
-Queue.prototype.start = function() {
+JobQueue.prototype.start = function() {
   this.shuttingDown = false;
   this.pend = new Pend();
   this.blockingRedisClients = [];
@@ -74,7 +74,7 @@ Queue.prototype.start = function() {
   this.flushStaleJobs();
 }
 
-var jobDefaults = {
+var taskDefaults = {
   // number of milliseconds since the last heartbeat to wait before
   // considering a job failed
   timeout: 10000,
@@ -85,14 +85,14 @@ var jobDefaults = {
   },
 };
 
-Queue.prototype.registerJob = function(jobTypeId, job) {
-  this.registeredJobs[jobTypeId] = extend(extend({}, jobDefaults), job);
+JobQueue.prototype.registerTask = function(taskId, task) {
+  this.tasks[taskId] = extend(extend({}, taskDefaults), task);
 };
 
 // begin a process job. If the resource is already ongoing processing, nothing happens.
-Queue.prototype.submitJob = function(jobTypeId, resourceId, params, cb) {
+JobQueue.prototype.submitJob = function(taskId, resourceId, params, cb) {
   var json = JSON.stringify({
-    type: jobTypeId,
+    type: taskId,
     resource: resourceId,
     params: params,
   });
@@ -101,7 +101,7 @@ Queue.prototype.submitJob = function(jobTypeId, resourceId, params, cb) {
   });
 };
 
-Queue.prototype.shutdown = function(callback) {
+JobQueue.prototype.shutdown = function(callback) {
   var self = this;
   self.shuttingDown = true;
   clearInterval(self.flushStaleInterval);
@@ -118,7 +118,7 @@ Queue.prototype.shutdown = function(callback) {
   });
 };
 
-Queue.prototype.flushStaleJobs = function() {
+JobQueue.prototype.flushStaleJobs = function() {
   var self = this;
   shavaluator.execWithClient(self.redisClient, "moveAll",
       [self.processingQueueKey, self.queueKey], [], function(err, result)
@@ -132,7 +132,7 @@ Queue.prototype.flushStaleJobs = function() {
   });
 };
 
-Queue.prototype.spawnWorker = function() {
+JobQueue.prototype.spawnWorker = function() {
   var self = this;
 
   // create new client because blpop blocks the connection
@@ -147,7 +147,7 @@ Queue.prototype.spawnWorker = function() {
   }
 };
 
-Queue.prototype.processOneItem = function(redisClient, cb) {
+JobQueue.prototype.processOneItem = function(redisClient, cb) {
   var self = this;
 
   redisClient.send_command('brpoplpush', [self.queueKey, self.processingQueueKey, 0], onResult);
@@ -177,9 +177,9 @@ Queue.prototype.processOneItem = function(redisClient, cb) {
       return cb();
     }
 
-    var job = self.registeredJobs[obj.type];
+    var job = self.tasks[obj.type];
     if (!job) {
-      self.emit('error', new Error("unregistered job: " + obj.type));
+      self.emit('error', new Error("unregistered task: " + obj.type));
       return cb();
     }
 

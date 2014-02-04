@@ -9,14 +9,14 @@ describe("JobQueue", function() {
     var jobQueue = new JobQueue({ workerCount: 8 });
     var processedString = null;
 
-    jobQueue.registerJob('thisIsMyJobTypeId', {
+    jobQueue.registerTask('thisIsMyJobTypeId', {
       perform: function(params, callback) {
         processedString = params.theString.toUpperCase();
         callback();
       },
     });
 
-    jobQueue.registerJob('pleaseShutDownNow', {
+    jobQueue.registerTask('pleaseShutDownNow', {
       perform: function(params, callback) {
         callback();
 
