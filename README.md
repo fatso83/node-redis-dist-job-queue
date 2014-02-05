@@ -79,10 +79,15 @@ module.exports = {
 
 ### jobQueue.start()
 
-Nothing happens until you call this method. This connects to redis and starts
-popping jobs off the queue.
+Starts the desired number of workers listening on the queue.
+
+It's quite possible that you never want to call `start()`. For example, the
+case where you want a server to submit processing jobs, but not perform them.
 
 ### jobQueue.registerTask(modulePath)
+
+You must register all the tasks you want to be able to perform before calling
+`start()`.
 
 `modulePath` is resolved just like a call to `require`.
 
