@@ -1,6 +1,6 @@
 {
   "name": "redis-dist-job-queue",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "distributed job queue using redis",
   "main": "lib/index.js",
   "author": "Andrew Kelley <superjoe30@gmail.com>",
