@@ -6,7 +6,7 @@
    own node module.
  * When you submit a processing job, you choose which task to run and
    supply a resource ID. If multiple processing jobs are submitted for the
-   same resource ID, only one of them will run.
+   same resource ID, only one of them will run at a time.
  * Jobs are taken from a redis queue; so the task could be performed on any
    computer with access to the resource.
  * When you want to shutdown, call `shutdown` and wait for the callback. This

@@ -58,13 +58,17 @@ describe("JobQueue", function() {
       jobQueue.submitJob('hitCount', 'hit_count', hitCountFile, assert.ifError);
     }
 
-    setTimeout(checkIt, 1000);
+    jobQueue.on('jobSuccess', function(err) {
+      count -= 1;
+      if (count === 0) return checkIt();
+      if (count < 0) throw new Error("more job completions than expected");
+    });
 
     function checkIt() {
       jobQueue.shutdown(function() {
         fs.readFile(hitCountFile, function(err, data) {
           if (err) throw err;
-          assert.strictEqual(parseInt(data, 10), 1);
+          assert.strictEqual(parseInt(data, 10), 20);
           done();
         });
       });

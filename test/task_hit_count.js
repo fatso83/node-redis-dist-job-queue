@@ -7,10 +7,7 @@ module.exports = {
       var x = parseInt(data, 10);
       if (err) return callback(err);
       x += 1;
-      fs.writeFile(filePath, x.toString(), function(err) {
-        if (err) return callback(err);
-        setTimeout(callback, 800);
-      });
+      fs.writeFile(filePath, x.toString(), callback);
     });
   },
 };
