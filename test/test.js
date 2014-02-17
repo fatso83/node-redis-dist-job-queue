@@ -7,10 +7,12 @@ var redis = require('redis');
 
 var describe = global.describe;
 var it = global.it;
+var before = global.before;
 var after = global.after;
 var beforeEach = global.beforeEach;
 
 var hitCountFile = path.resolve(__dirname, "hitCount.txt");
+var twiceFile = path.resolve(__dirname, "twice.txt");
 
 describe("JobQueue", function() {
   beforeEach(function(done) {
@@ -23,6 +25,15 @@ describe("JobQueue", function() {
       done();
     });
   });
+
+  before(tryUnlickTwiceFile);
+  after(tryUnlickTwiceFile);
+
+  function tryUnlickTwiceFile(done) {
+    fs.unlink(twiceFile, function(err) {
+      done();
+    });
+  }
 
   it("processes a thing and then shuts down - in process", function(done) {
     var jobQueue = new JobQueue({ workerCount: 8 });
@@ -40,8 +51,8 @@ describe("JobQueue", function() {
 
     jobQueue.start();
 
-    jobQueue.submitJob('thisIsMyTaskId', 'resource_id', {theString: "derp"}, assert.ifError);
-    jobQueue.submitJob('callback', 'resource_id_2', null, assert.ifError);
+    jobQueue.submitJob('thisIsMyTaskId', {params: {theString: "derp"}}, assert.ifError);
+    jobQueue.submitJob('callback', assert.ifError);
   });
 
   it("processes a thing and then shuts down - child processes", function(done) {
@@ -53,9 +64,13 @@ describe("JobQueue", function() {
 
     jobQueue.start();
 
+    var options = {
+      resourceId: 'hit_count',
+      params: hitCountFile,
+    };
     var count = 20;
     for (var i = 0; i < count; i += 1) {
-      jobQueue.submitJob('hitCount', 'hit_count', hitCountFile, assert.ifError);
+      jobQueue.submitJob('hitCount', options, assert.ifError);
     }
 
     jobQueue.on('jobSuccess', function(err) {
@@ -95,7 +110,7 @@ describe("JobQueue", function() {
 
     jobQueue.start();
 
-    jobQueue.submitJob('failFirst', 'foo', null, assert.ifError);
+    jobQueue.submitJob('failFirst', assert.ifError);
   });
 
   it("ability to delete failed jobs", function(done) {
@@ -112,7 +127,7 @@ describe("JobQueue", function() {
             assert.strictEqual(shared.count, 1);
             jobQueue.shutdown(done);
           };
-          jobQueue.submitJob('callback', 'foo2', null, assert.ifError);
+          jobQueue.submitJob('callback', assert.ifError);
         });
       });
     });
@@ -122,7 +137,7 @@ describe("JobQueue", function() {
 
     jobQueue.start();
 
-    jobQueue.submitJob('failFirst', 'foo', null, assert.ifError);
+    jobQueue.submitJob('failFirst', assert.ifError);
   });
 
   it("handles jobs that crash while processing", function(done) {
@@ -144,6 +159,38 @@ describe("JobQueue", function() {
 
     jobQueue.start();
 
-    jobQueue.submitJob('crashTask', 'derpy', null, assert.ifError);
+    jobQueue.submitJob('crashTask', assert.ifError);
+  });
+
+  it("tries jobs twice if requested", function(done) {
+    var jobQueue = new JobQueue();
+
+    jobQueue.registerTask('./task_twice');
+
+    jobQueue.on('jobSuccess', function(job) {
+      jobQueue.shutdown(done);
+    });
+
+    jobQueue.start();
+
+    jobQueue.submitJob('twice', {retries: 1}, assert.ifError);
+  });
+
+  it("retries jobs that time out", function(done) {
+    var jobQueue = new JobQueue({childProcessCount: 1, workerCount: 1});
+
+    jobQueue.registerTask('./task_twice_cb');
+
+    jobQueue.on('jobSuccess', function(job) {
+      jobQueue.shutdown(done);
+    });
+
+    jobQueue.start();
+
+    jobQueue.submitJob('twice_cb', {params: twiceFile, retries: 1}, assert.ifError);
+
+    setTimeout(function() {
+      jobQueue.forceFlushStaleJobs(assert.ifError);
+    }, 200);
   });
 });

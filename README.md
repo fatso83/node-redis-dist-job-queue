@@ -29,7 +29,8 @@ jobQueue.registerTask("./foo_node_module");
 
 jobQueue.start();
 
-jobQueue.submitJob('thisIsMyTaskId', 'resource_id', {theString: "derp"}, function(err) {
+var options = {resourceId: 'resource_id', params: {theString: "derp"}};
+jobQueue.submitJob('thisIsMyTaskId', options, function(err) {
   if (err) throw err;
   console.info("job submitted");
 });
@@ -107,16 +108,19 @@ And it may export these optional options:
  * `timeout` - milliseconds since last heartbeat to wait before considering
    a job failed. defaults to `10000`.
 
-### jobQueue.submitJob(taskId, resourceId, params, callback)
+### jobQueue.submitJob(taskId, options, callback)
 
 Adds a job to the queue to be processed by the next available worker.
 
  * `taskId` - the `id` field of a task you registered with `registerTask`
    earlier.
- * `resourceId` - a unique identifier for the resource you are about to
-   process. Only one job will run at a time per resource.
- * `params` - an object which will get serialized to and from JSON and then
-   passed to the `perform` function of a task.
+ * `options` - object containing any of these properties:
+   * `resourceId` - a unique identifier for the resource you are about to
+     process. Only one job will run at a time per resource.
+   * `params` - an object which will get serialized to and from JSON and then
+     passed to the `perform` function of a task.
+   * `retries` - how many times to retry a job before moving it to the failed
+     queue. Defaults to 0.
  * `callback(err)` - lets you know when the job made it onto the queue
 
 ### jobQueue.shutdown(callback)
