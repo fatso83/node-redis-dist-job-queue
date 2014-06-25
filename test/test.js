@@ -36,7 +36,7 @@ describe("JobQueue", function() {
   }
 
   it("processes a thing and then shuts down - in process", function(done) {
-    var jobQueue = new JobQueue({ workerCount: 8, redisConfig: {host: 'localhost'} });
+    var jobQueue = new JobQueue({ workerCount: 8, redisConfig: {db: undefined} });
     shared.processedString = null;
     shared.callback = function(params) {
       assert.strictEqual(params, null);
