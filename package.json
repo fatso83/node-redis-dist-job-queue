@@ -4,7 +4,7 @@
   "description": "distributed job queue using redis",
   "main": "lib/index.js",
   "author": "Andrew Kelley <superjoe30@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "redis": "~0.12.1",
     "redis-evalsha": "~1.1.1",
